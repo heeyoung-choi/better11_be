@@ -1,11 +1,14 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const app = express();
 const PORT = 8000;
 
 // Middleware
 app.use(bodyParser.json());
-
+app.use(cors({
+  origin: 'http://localhost:3000' // Specify the frontend port
+}));
 app.get('/', (req, res) => {
   res.send('Hello, World! This is your simple Express.js app.');
 });
@@ -20,11 +23,11 @@ app.post('/login', async (req, res) => {
 
   if (username === "huydang" && password == "123")
   {
-    return res.send('login successfully');
+    res.json({ message: 'Login successful' });
   }
   else 
   {
-    return res.send('login unsuccessfully');
+    return res.status(401).send('login unsuccessfully');
   }
 });
 
