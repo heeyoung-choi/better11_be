@@ -1,25 +1,45 @@
 {
-  "name": "better11-be",
-  "version": "0.0.0",
+  "name": "better11",
+  "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js"
-  },
   "dependencies": {
-    "body-parser": "^1.20.3",
-    "cookie-parser": "~1.4.4",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fontsource/roboto": "^5.1.0",
+    "@mui/icons-material": "^6.2.1",
+    "@mui/material": "^6.2.1",
+    "@testing-library/react": "16.1.0",
     "cors": "^2.8.5",
-    "debug": "~2.6.9",
-    "express": "~4.16.1",
-    "http-errors": "~1.6.3",
-    "jade": "~1.11.0",
-    "morgan": "~1.9.1",
-    "nodemon": "^3.1.9"
+    "cra-template": "1.2.0",
+    "firebase": "^11.1.0",
+    "firebase-admin": "^13.0.2",
+    "react": "^18.3.1",
+    "react-datepicker": "^7.5.0",
+    "react-dom": "^18.3.1",
+    "react-scripts": "5.0.1"
   },
-  "main": "app.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": ""
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
 }
