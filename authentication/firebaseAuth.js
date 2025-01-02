@@ -11,7 +11,7 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
 
-  // check email in wrong format
+  // Check email format
   if (!email.includes('@')) {
     return res.status(400).json({ error: 'Invalid email format' });
   }
@@ -19,13 +19,13 @@ router.post('/login', async (req, res) => {
   try {
     // Fetch user by email
     const user = await admin.auth().getUserByEmail(email);
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+
+    // Compare the password (use a secure hashing mechanism like bcrypt in production)
+    if (password !== user.password) {
+      return res.status(401).json({ error: 'Invalid password' });
     }
 
-    // Here, you would compare the password (use a secure method, e.g., bcrypt)
-
-    // Generate a custom token to simulate a successful login
+    // Generate a custom token
     const customToken = await admin.auth().createCustomToken(user.uid);
 
     res.json({
@@ -38,10 +38,17 @@ router.post('/login', async (req, res) => {
       },
     });
   } catch (error) {
+    if (error.code === 'auth/user-not-found') {
+      // Handle specific error when user is not found
+      return res.status(401).json({ error: 'Invalid email or user does not exist.' });
+    }
+
+    // Log other errors and respond with a generic message
     console.error('Error during login:', error.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 // Register route
 router.post('/register', async (req, res) => {
