@@ -55,7 +55,7 @@ router.get('/leaderboard', async (req, res) => {
     snapshot.forEach(doc => {
       const data = doc.data();
       leaderboard.push({
-        displayName: data.display_name,
+        displayName: data.displayName,
         points: data.points,
       });
     });
