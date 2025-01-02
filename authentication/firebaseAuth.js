@@ -59,11 +59,22 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    // Create a new user
+    // Create a new user in Firebase Authentication
     const userRecord = await admin.auth().createUser({
       email,
       password,
       displayName,
+    });
+
+    // Add the user to Firestore
+    const db = admin.firestore();
+    const userDoc = db.collection('users').doc(userRecord.uid);
+
+    await userDoc.set({
+      email: userRecord.email,
+      displayName: userRecord.displayName,
+      points: 0, // Initialize points to 0
+      createdAt: new Date().toISOString(),
     });
 
     res.json({
@@ -79,5 +90,6 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ error: 'Failed to register user' });
   }
 });
+
 
 module.exports = router;

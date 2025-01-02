@@ -7,6 +7,8 @@ const API_FOOTBALL_KEY = '6c4362965bmshc7357b4fd26115cp136a72jsnbea643c8c40d';
 const API_FOOTBALL_BASE_URL = 'https://api-football-v1.p.rapidapi.com/v3/';
 
 
+
+
 // Predict route
 router.post('/predict', async (req, res) => {
   const { userId, matchId, type, data } = req.body;
@@ -22,7 +24,7 @@ router.post('/predict', async (req, res) => {
       matchId,
       type,
       data,
-      timestamp: new Date().toISOString(), // Add a timestamp
+      timestamp: new Date().toISOString(), // Add a timestamp automatically
     };
 
     // Add prediction to Firestore
@@ -35,7 +37,38 @@ router.post('/predict', async (req, res) => {
   }
 });
 
+// Get leaderboard
+router.get('/leaderboard', async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const usersRef = db.collection('users');
 
+    // Query users, order by points in descending order
+    const snapshot = await usersRef.orderBy('points', 'desc').get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({ error: 'No users found.' });
+    }
+
+    // Extract user data for leaderboard
+    const leaderboard = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      leaderboard.push({
+        displayName: data.display_name,
+        points: data.points,
+      });
+    });
+
+    res.json({
+      message: 'Leaderboard retrieved successfully',
+      leaderboard,
+    });
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error.message);
+    res.status(500).json({ error: 'Failed to fetch leaderboard.' });
+  }
+});
 
 router.get('/matches', async (req, res) => {
   try {
@@ -104,7 +137,7 @@ router.get('/match-result/:matchId', async (req, res) => {
   }
 });
 
-// Check if a user's prediction is correct
+// Check if a user's prediction is correct and update points
 router.get('/check-prediction/:userId/:matchId', async (req, res) => {
   const { userId, matchId } = req.params;
 
@@ -115,6 +148,7 @@ router.get('/check-prediction/:userId/:matchId', async (req, res) => {
   try {
     const db = admin.firestore();
     const predictionsRef = db.collection('predictions');
+    const usersRef = db.collection('users');
 
     // Fetch user's prediction
     const predictionSnapshot = await predictionsRef
@@ -127,7 +161,18 @@ router.get('/check-prediction/:userId/:matchId', async (req, res) => {
       return res.status(404).json({ error: 'No prediction found for this user and match.' });
     }
 
-    const prediction = predictionSnapshot.docs[0].data();
+    const predictionDoc = predictionSnapshot.docs[0];
+    const prediction = predictionDoc.data();
+
+    // Check if points have already been awarded
+    if (prediction.pointsAwarded) {
+      return res.json({
+        message: 'Prediction already checked and points awarded.',
+        prediction,
+        isCorrect: true, // Assume it was correct if points were awarded
+        pointsUpdated: 0,
+      });
+    }
 
     // Fetch match result from API-Football
     const response = await axios.get(`${API_FOOTBALL_BASE_URL}fixtures`, {
@@ -166,18 +211,34 @@ router.get('/check-prediction/:userId/:matchId', async (req, res) => {
     if (prediction.type === 'winner') {
       const predictedWinner = prediction.data.predictedWinner || prediction.data; // Handle both object and string formats
       if (predictedWinner === 'Draw') {
-        // Correct if the match result is a draw
-        isCorrect = actualResult.homeScore === actualResult.awayScore;
+        isCorrect = actualResult.homeScore === actualResult.awayScore; // Match is a draw
       } else {
-        // Correct if the predicted winner matches the actual winner
-        isCorrect = predictedWinner === actualResult.winner;
+        isCorrect = predictedWinner === actualResult.winner; // Match winner matches prediction
       }
-    }
-     else if (prediction.type === 'score') {
-      const predictedScores = JSON.parse(prediction.data); // Assumes prediction.data is a JSON string
+    } else if (prediction.type === 'score') {
+      const predictedScores = prediction.data.predictedScore;
       isCorrect =
-        predictedScores.homeScore === actualResult.homeScore &&
-        predictedScores.awayScore === actualResult.awayScore;
+        predictedScores.teamA === actualResult.homeScore &&
+        predictedScores.teamB === actualResult.awayScore; // Exact score matches
+    }
+
+    // Update user points if prediction is correct
+    let pointsUpdated = 0;
+    if (isCorrect) {
+      const userDoc = await usersRef.doc(userId).get();
+      if (!userDoc.exists) {
+        return res.status(404).json({ error: 'User not found.' });
+      }
+
+      const userData = userDoc.data();
+      const updatedPoints = (userData.points || 0) + 10; // Add 10 points for a correct prediction
+      pointsUpdated = 10;
+
+      // Update points in Firestore
+      await usersRef.doc(userId).update({ points: updatedPoints });
+
+      // Mark prediction as rewarded
+      await predictionDoc.ref.update({ pointsAwarded: true });
     }
 
     res.json({
@@ -185,12 +246,14 @@ router.get('/check-prediction/:userId/:matchId', async (req, res) => {
       prediction,
       actualResult,
       isCorrect,
+      pointsUpdated,
     });
   } catch (error) {
     console.error('Error checking prediction:', error.message);
     res.status(500).json({ error: 'Failed to check prediction.' });
   }
 });
+
 
 
 
